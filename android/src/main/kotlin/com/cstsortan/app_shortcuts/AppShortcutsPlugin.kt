@@ -1,9 +1,7 @@
 package com.cstsortan.app_shortcuts
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
@@ -11,10 +9,9 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
+import android.util.Base64
 import android.util.Log
 import androidx.annotation.NonNull
-import androidx.core.content.ContextCompat.getSystemService
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -22,8 +19,8 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import java.net.URL
 import kotlin.concurrent.thread
+
 
 /** AppShortcutsPlugin */
 class AppShortcutsPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
@@ -45,30 +42,30 @@ class AppShortcutsPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     if (call.method == "createAndroidShortcut") {
       val id: String = call.argument<String>("id").toString()
       val title: String = call.argument<String>("title").toString();
-      val imageUrl: String = call.argument<String>("imageUrl").toString()
-      val url = URL(imageUrl)
+      val imageBase64: String = call.argument<String>("imageBase64").toString()
 
       thread {
-        val imageBitmap = BitmapFactory.decodeStream(url.openStream())
-
         activity.runOnUiThread {
           val link: String = call.argument<String>("link").toString()
           if (shortcutManager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && shortcutManager!!.isRequestPinShortcutSupported) {
 
+            val imageData = Base64.decode(imageBase64, Base64.DEFAULT)
+            val image = BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+
             val shortcutInfo = ShortcutInfo.Builder(activity, id)
                     .setShortLabel(title)
                     .setLongLabel(title)
-                    .setIcon(Icon.createWithBitmap(imageBitmap))
+                    .setIcon(Icon.createWithBitmap(image))
                     .setIntent(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
                     .build()
 
             val pinnedShortcutCallbackIntent = shortcutManager?.createShortcutResultIntent(shortcutInfo)
             val successCallback = PendingIntent.getBroadcast(activity, /* request code */ 0,
-                    pinnedShortcutCallbackIntent, /* flags */ 0)
-            shortcutManager?.requestPinShortcut(shortcutInfo, successCallback.intentSender)
+                    pinnedShortcutCallbackIntent, PendingIntent.FLAG_IMMUTABLE)
+            shortcutManager!!.requestPinShortcut(shortcutInfo, successCallback.intentSender)
             result.success("done")
           } else {
-            result.error("not-supported", "Pinned shortcutsare not supported in this device", null)
+            result.error("not-supported", "Pinned shortcuts are not supported in this device", null)
           }
         }
       }

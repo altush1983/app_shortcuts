@@ -25,9 +25,8 @@ class _MyAppState extends State<MyApp> {
       title: "Pub.dev",
       link: 'https://pub.dev/',
       id: 'pub.dev',
-      description: "Add pub.dev to your home screen",
-      imageUrl:
-          'https://flutter.dev/images/favicon.png',
+      // imageUrl:
+      //     'https://flutter.dev/images/favicon.png',
     );
   }
 
